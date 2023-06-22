@@ -1,0 +1,371 @@
+day 4
+
+EDGE:
+!MAKE ACL
+conf t
+no access-list 1
+access-list 1 deny 10.12.0.0 0.0.255.255
+access-list 1 deny 10.22.0.0 0.0.255.255
+access-list 1 deny 10.32.0.0 0.0.255.255
+access-list 1 deny 10.42.0.0 0.0.255.255
+access-list 1 deny 10.52.0.0 0.0.255.255
+access-list 1 permit Any
+int gi 0/0/1
+ ip access-group 1 in
+ do sh ip access-list 1
+end
+
+!unlock ACL:
+conf t
+int gi 0/0/1
+ no ip access-group 1 in
+ do sh ip access-list 1
+end
+
+!ACL 2
+conf t
+no access-list 2
+access-list 2 deny 10.32.0.0 0.0.255.255
+access-list 2 deny 10.41.0.0 0.0.255.255
+access-list 2 deny 10.42.0.0 0.0.255.255
+access-list 2 deny 10.51.0.0 0.0.255.255
+access-list 2 deny 10.52.0.0 0.0.255.255
+access-list 2 permit Any
+int gi 0/0/1
+ ip access-group 2 in
+ do sh ip access-list 2
+end
+
+!unlock ACL 2
+conf t
+int gi 0/0/1
+ no ip access-group 2 in
+ do sh ip access-list 2
+end
+
+!ACL 3
+conf t
+no access-list 3
+access-list 3 deny 10.21.0.0 0.0.255.255
+access-list 3 deny 10.22.0.0 0.0.255.255
+access-list 3 deny 10.31.0.0 0.0.255.255
+access-list 3 deny 10.32.0.0 0.0.255.255
+access-list 3 deny 10.41.0.0 0.0.255.255
+access-list 3 deny 10.42.0.0 0.0.255.255
+access-list 3 permit Any
+int gi 0/0/1
+ ip access-group 3 in
+ do sh ip access-list 3
+end
+
+!unlock ACL 3
+conf t
+int gi 0/0/1
+ no ip access-group 3 in
+ do sh ip access-list 3
+end
+
+!ACL 4: Deny any:Automatic:konti permit, dami deny
+conf t
+no access-list 4
+access-list 4 permit 10.12.0.0 0.0.255.255
+!(ACL4 deny any)
+int gi 0/0/1
+ip access-group 4 in
+end
+
+!unlock ACL 4
+conf t
+int gi 0/0/1
+ no ip access-group 4 in
+ do sh ip access-list 4
+end
+
+conf t
+no access-list 5
+access-list 5 permit 10.12.0.0 0.0.255.255
+access-list 5 permit 10.22.0.0 0.0.255.255
+!(ACL4 deny any)
+int gi 0/0/1
+ip access-group 5 in
+end
+
+!unlock ACL 5
+conf t
+int gi 0/0/1
+ no ip access-group 5 in
+ do sh ip access-list 5
+end
+
+!Allow only ur own to conn to telnet / ssh ur EDGE:
+conf t
+access-list 6 permit 10.11.0.0 0.0.255.255
+access-list 6 permit 200.0.0.11 0.0.0.0
+line vty 0 14
+access-class 6 in
+end
+
+!unlock ACL 6
+conf t
+line vty 0 14
+ no ip access-class 6 in
+ do sh ip access-list 6
+end
+
+!Extended ACL to protect network
+@CUCM
+config t
+int fa 0/0
+ ip add 10.11.100.9 255.255.255.0 Secondary
+service finger
+service tcp-small-servers
+service udp-small-servers
+ip dns server
+ip http server
+ip http secure-server
+!Make Ping EASY
+ip host pc 10.11.1.10
+ip host cm 10.11.100.8
+ip host cm2 10.11.100.9
+ip host p1 10.11.100.101
+ip host p2 10.11.100.102
+ip host sw 10.11.1.4
+ip host ed 10.11.11.1
+
+
+
+cm open only http, https
+cm2 open only dns, ssh
+
+conf t
+no access-list 100
+access-list 100 permit tcp any host cm eq 80
+access-list 100 permit tcp any host cm eq 443
+access-list 100 permit tcp any host cm eq 2000
+access-list 100 permit tcp any host cm2 eq 53
+access-list 100 permit tcp any host cm2 eq 22
+int fa 0/0
+ip access-group 100 in
+ do sh ip access-list 100
+
+convert to nameed:
+conf t
+no Ip access-list extended FP1
+Ip access-list extended FP1
+permit tcp any host cm eq 80
+permit tcp any host cm eq 443
+permit tcp any host cm eq 2000
+permit tcp any host cm2 eq 53
+permit tcp any host cm2 eq 22
+int fa 0/0
+ip access-group FP1 in
+ do sh ip access-list FP1
+
+unlock:
+conf t
+int fa0/0
+no ip access-group FP1 in
+
+example #2
+configure extended FP2
+
+conf t
+no Ip access-list extended FP2
+Ip access-list extended FP2
+permit tcp any host cm eq 22
+permit tcp any host cm eq 23
+permit tcp any host cm eq 80
+permit tcp any host cm2 eq 80
+permit tcp any host cm2 eq 443
+permit tcp any host cm2 eq 23
+permit tcp any host cm2 eq 2000
+int fa 0/0
+ip access-group FP2 in
+ do sh ip access-list FP2
+
+unlock:
+conf t
+int fa0/0
+no ip access-group FP2 in
+
+example 3
+
+conf t
+no Ip access-list extended FP3
+Ip access-list extended FP3
+permit tcp any host cm eq 53
+permit tcp any host cm eq 443
+permit tcp any host cm eq 2000
+permit tcp any host cm2
+permit tcp any host cm2 eq 80
+int fa 0/0
+ip access-group FP3 in
+ do sh ip access-list FP3
+
+unlock:
+conf t
+int fa0/0
+no ip access-group FP3 in
+
+example 4:
+no Ip access-list extended FP4
+Ip access-list extended FP4
+permit tcp any host cm gt 100
+permit tcp any host cm2 range 20 80
+int fa 0/0
+ip access-group FP4 in
+ do sh ip access-list FP4
+
+unlock:
+conf t
+int fa0/0
+no ip access-group FP4 in
+
+______________________________
+tiny linux
+linux2A: 192.168.102.21/24
+linux2B: 192.168.102.22/24
+linux3A: 192.168.103.31/24
+
+UTM:
+conf t
+no logging console
+int gi 1
+no shut
+ip add 192.168.108.5 255.255.255.0
+int gi 2
+no shut
+ip add 192.168.102.5 255.255.255.0
+int gi 3
+no shut
+ip add 192.168.103.5 255.255.255.0
+
+2A:
+sudo ifconfig eth0 192.168.102.21 netmask 255.255.255.0 up
+sudo route add default gw 192.168.102.5
+
+2B:
+sudo ifconfig eth0 192.168.102.22 netmask 255.255.255.0 up
+sudo route add default gw 192.168.102.5
+
+3A:
+sudo ifconfig eth0 192.168.103.31 netmask 255.255.255.0 up
+sudo route add default gw 192.168.103.5
+
+
+ExamLab1: Give internet to all cisco devices
+
+Internet>UTM
+conf t
+ip name-server 8.8.8.8
+ip route 0.0.0.0 0.0.0.0 192.168.108.2
+
+Give internet to all linux via NAT
+
+3 steps to NAT internet sharing
+conf t
+access-list 8 permit 192.168.102.0 0.0.0.255
+access-list 8 permit 192.168.103.0 0.0.0.255
+!DefineINSIDE vs OUTSIDE:
+int gi 1
+ ip nat Outside
+int gi 2
+ ip nat Inside
+int gi 3
+ ip nat Inside
+!step3: create a static nat pool with overload
+ip nat inside source static 192.168.102.21 192.168.108.121
+ip nat inside source static 192.168.103.31 192.168.108.131
+!for everyone else
+ip nat inside source list 8 int gi 1 overload
+do sh ip nat translation
+
+
+ExamLab#2 Cisco Network Time Protocol:
+synchronize with NetworkTimeProtocol
+@UTM
+show clock
+conf t
+NTP server pool.ntp.org
+do sh ntp association
+do sh clock
+
+ExamLab#3 Enable SSHv2 on any Cisco device
+encrypt with SSH
+@CiscoUTM
+conf t
+ip domain-name rivanit.com
+!create new rsa public/private keys
+crypto key generate rsa
+
+ip ssh version 2
+end
+
+ExamLab#4 Extended access-list on cisco utm
+cisco utm:
+create a FP7 where:
+192.168.102.5 open web,https
+192.168.103.5 open telnet,ssh
+
+conf t
+no Ip access-list extended FP7
+Ip access-list extended FP7
+permit tcp any host 192.168.102.5 eq 80
+permit tcp any host 192.168.102.5 eq 443
+permit tcp any host 192.168.103.5 eq 23
+permit tcp any host 192.168.103.5 eq 22
+int gi 2
+ip access-group FP7 in
+int gi 3
+ip access-group FP7 in
+
+
+ do sh ip access-list FP7
+
+unlock:
+conf t
+int gi 2
+no ip access-group FP7 in
+int gi 3
+no ip access-group FP7 in
+
+
+
+
+Open dns, finger, on UTM
+conf t
+ip dns server
+service finger
+service tcp-small-servers
+service udp-small-servers
+
+
+LAB4.a
+conf t
+no Ip access-list extended FP9
+Ip access-list extended FP9
+permit icmp any host 192.168.102.5
+permit tcp any host 192.168.102.5 eq 53
+permit tcp any host 192.168.102.5 eq 19
+permit tcp any host 192.168.103.5 eq 80
+permit tcp any host 192.168.103.5 eq 443
+permit tcp any host 192.168.103.5 eq 22
+permit tcp any host 192.168.103.5 eq 23
+
+int gi 2
+ip access-group FP9 in
+int gi 3
+ip access-group FP9 in
+
+!!!!unlock
+conf t
+int gi 2
+no ip access-group FP9 in
+int gi 3
+no ip access-group FP9 in
+
+
+
+
+
+
